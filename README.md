@@ -31,6 +31,7 @@ pipeline CI para validar la aplicación antes de desplegarla.
 - Zustand
 - Vitest
 - Docker
+- VS Code Dev Containers
 - GitHub Actions
 
 ## Desarrollo local
@@ -43,6 +44,34 @@ npm run dev
 ```
 
 Abre [http://localhost:3000](http://localhost:3000) en el navegador.
+
+## Desarrollo en Dev Container
+
+El proyecto incluye un Dev Container para trabajar dentro de un entorno
+reproducible con Node.js 22, npm, Docker CLI y Docker Compose.
+
+Requisitos:
+
+- Docker Desktop o Docker Engine
+- VS Code
+- Extensión Dev Containers
+
+Flujo recomendado:
+
+1. Abre el proyecto en VS Code
+2. Ejecuta `Dev Containers: Reopen in Container`
+3. Espera a que finalice `npm ci`
+4. Ejecuta `npm run dev`
+
+Desde el Dev Container también puedes validar el flujo DevOps local:
+
+```bash
+npm run lint
+npm test
+npm run build
+docker build -t reserva24:local .
+docker compose up --build
+```
 
 ## Pruebas y validación
 
@@ -95,6 +124,7 @@ Este flujo funciona como quality gate para pull requests y pushes a `main`.
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .dockerignore
+├── .devcontainer/
 ├── .github/workflows/ci.yml
 ├── vitest.config.ts
 └── src/lib/*.test.ts
