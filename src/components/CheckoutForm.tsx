@@ -6,17 +6,78 @@ import { useCartStore } from "@/lib/cart.store"
 import { formatCOP } from "@/lib/pricing"
 import { useHydrated } from "@/lib/use-hydrated"
 
+type FormFields = {
+  name: string
+  document: string
+  phone: string
+  email: string
+  address: string
+  notes: string
+}
+
 export default function CheckoutForm() {
   const items = useCartStore((state) => state.items)
   const subtotal = useCartStore((state) => state.subtotal())
+  const clearCart = useCartStore((state) => state.clear)
   const mounted = useHydrated()
   const [message, setMessage] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setMessage(
-      "El formulario está listo. El siguiente paso será conectarlo con Mercado Pago."
-    )
+    setIsSubmitting(true)
+    setMessage("")
+
+    const formData = new FormData(event.currentTarget)
+    const payload: FormFields = {
+      name: String(formData.get("name") ?? ""),
+      document: String(formData.get("document") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      address: String(formData.get("address") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+    }
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          customerName: payload.name,
+          document: payload.document,
+          phone: payload.phone,
+          email: payload.email,
+          address: payload.address,
+          notes: payload.notes,
+          items: items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            qty: item.qty,
+            price: item.price,
+          })),
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? "No se pudo crear el pedido")
+      }
+
+      clearCart()
+      setMessage(
+        `Pedido creado correctamente. Tu número de referencia es ${result.data.id}.`
+      )
+      event.currentTarget.reset()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear el pedido. Inténtalo de nuevo."
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (!mounted) {
@@ -86,8 +147,11 @@ export default function CheckoutForm() {
           <span>Subtotal</span>
           <span>{formatCOP(subtotal)}</span>
         </div>
-        <button className="w-full rounded-full bg-[#d7a63e] px-5 py-3.5 text-sm font-bold text-[#1d211c] transition hover:bg-[#f1c35d]">
-          Pagar con Mercado Pago
+        <button
+          disabled={isSubmitting}
+          className="w-full rounded-full bg-[#d7a63e] px-5 py-3.5 text-sm font-bold text-[#1d211c] transition hover:bg-[#f1c35d] disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isSubmitting ? "Creando pedido..." : "Pagar con Mercado Pago"}
         </button>
         {message && (
           <p className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-5 text-white/75">

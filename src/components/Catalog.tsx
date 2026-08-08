@@ -1,13 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import ProductCard from "./ProductCard"
-import { products } from "@/lib/products.mock"
-
-const categories = ["Todos", ...new Set(products.map((product) => product.category))]
+import type { Product } from "@/lib/products.mock"
 
 export default function Catalog() {
+  const [products, setProducts] = useState<Product[]>([])
   const [category, setCategory] = useState("Todos")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/products")
+        const payload = await response.json()
+        setProducts(payload.data ?? [])
+      } catch (error) {
+        console.error("No se pudieron cargar los productos", error)
+        setProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
+
+  const categories = useMemo(
+    () => ["Todos", ...new Set(products.map((product) => product.category))],
+    [products]
+  )
+
   const visibleProducts =
     category === "Todos"
       ? products
@@ -46,11 +69,21 @@ export default function Catalog() {
         ))}
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {visibleProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="rounded-[2rem] border border-black/10 bg-white p-10 text-center text-sm text-black/55">
+          Cargando productos...
+        </div>
+      ) : visibleProducts.length === 0 ? (
+        <div className="rounded-[2rem] border border-black/10 bg-white p-10 text-center text-sm text-black/55">
+          No hay productos disponibles para esta categoría.
+        </div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {visibleProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </section>
   )
 }
