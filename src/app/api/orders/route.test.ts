@@ -13,7 +13,7 @@ describe("POST /api/orders", () => {
           phone: "3001234567",
           email: "ana@example.com",
           address: "Calle 10 # 20-30",
-          items: [{ id: "p1", name: "Producto 1", qty: 1, price: 10000 }],
+          items: [{ id: "aguardiente-antioqueno-750", name: "Aguardiente Antioqueño", qty: 1, price: 45000 }],
         }),
       })
     )
@@ -32,7 +32,7 @@ describe("POST /api/orders", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           customerName: "Ana Pérez",
-          items: [{ id: "p1", name: "Producto 1", qty: 1, price: 10000 }],
+          items: [{ id: "aguardiente-antioqueno-750", name: "Aguardiente Antioqueño", qty: 1, price: 45000 }],
         }),
       })
     )
@@ -41,5 +41,28 @@ describe("POST /api/orders", () => {
 
     const body = await response.json()
     expect(body.success).toBe(false)
+  })
+
+  it("returns 400 when one of the requested products does not exist", async () => {
+    const response = await POST(
+      new Request("http://localhost", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          customerName: "Ana Pérez",
+          document: "1000000000",
+          phone: "3001234567",
+          email: "ana@example.com",
+          address: "Calle 10 # 20-30",
+          items: [{ id: "producto-inexistente", name: "Producto inexistente", qty: 1, price: 10000 }],
+        }),
+      })
+    )
+
+    expect(response.status).toBe(400)
+
+    const body = await response.json()
+    expect(body.success).toBe(false)
+    expect(body.error).toBe("Producto no encontrado")
   })
 })

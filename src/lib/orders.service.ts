@@ -1,3 +1,5 @@
+import { products } from "@/lib/products.mock"
+
 export type OrderItem = {
   id: string
   name: string
@@ -34,7 +36,30 @@ function buildOrderId() {
 }
 
 export function createOrder(input: CreateOrderInput): Order {
-  const total = input.items.reduce((sum, item) => sum + item.price * item.qty, 0)
+  const orderItems = input.items.map((item) => {
+    const product = products.find((candidate) => candidate.id === item.id)
+
+    if (!product) {
+      throw new Error("Producto no encontrado")
+    }
+
+    if (!Number.isInteger(item.qty) || item.qty <= 0) {
+      throw new Error("Cantidad inválida")
+    }
+
+    if (item.price !== product.price) {
+      throw new Error("Precio inválido")
+    }
+
+    return {
+      id: product.id,
+      name: product.name,
+      qty: item.qty,
+      price: product.price,
+    }
+  })
+
+  const total = orderItems.reduce((sum, item) => sum + item.price * item.qty, 0)
 
   return {
     id: buildOrderId(),
@@ -46,7 +71,7 @@ export function createOrder(input: CreateOrderInput): Order {
     email: input.email,
     address: input.address,
     notes: input.notes,
-    items: input.items,
+    items: orderItems,
     total,
   }
 }

@@ -19,14 +19,16 @@ export default function CheckoutForm() {
   const items = useCartStore((state) => state.items)
   const subtotal = useCartStore((state) => state.subtotal())
   const clearCart = useCartStore((state) => state.clear)
-  const mounted = useHydrated()
   const [message, setMessage] = useState("")
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const mounted = useHydrated()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsSubmitting(true)
     setMessage("")
+    setCreatedOrderId(null)
 
     const formData = new FormData(event.currentTarget)
     const payload: FormFields = {
@@ -65,6 +67,7 @@ export default function CheckoutForm() {
       }
 
       clearCart()
+      setCreatedOrderId(result.data.id)
       setMessage(
         `Pedido creado correctamente. Tu número de referencia es ${result.data.id}.`
       )
@@ -81,7 +84,27 @@ export default function CheckoutForm() {
   }
 
   if (!mounted) {
-    return <div className="min-h-96 animate-pulse rounded-[2rem] bg-black/5" />
+    return <div className="min-h-72 animate-pulse rounded-[2rem] bg-black/5" />
+  }
+
+  if (createdOrderId) {
+    return (
+      <div className="rounded-[2rem] border border-[#183c2c]/15 bg-white p-10 text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6f1d2a]">
+          Pedido recibido
+        </p>
+        <h2 className="mt-3 font-display text-2xl font-bold">Gracias por tu compra</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-black/60">
+          {message} Te contactaremos para coordinar la entrega.
+        </p>
+        <Link
+          href="/#catalogo"
+          className="mt-6 inline-block rounded-full bg-[#183c2c] px-6 py-3 text-sm font-bold text-white"
+        >
+          Volver al catálogo
+        </Link>
+      </div>
+    )
   }
 
   if (items.length === 0) {

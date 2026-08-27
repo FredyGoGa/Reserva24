@@ -31,16 +31,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: order }, { status: 201 })
   } catch (error) {
-    if (
-      error instanceof Error &&
-      ["Producto no encontrado", "Cantidad inválida", "Precio inválido"].includes(error.message)
-    ) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 }
-      )
-    }
-
     return NextResponse.json(
       { success: false, error: "No se pudo procesar el pedido" },
       { status: 500 }
