@@ -8,15 +8,20 @@ export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([])
   const [category, setCategory] = useState("Todos")
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     async function loadProducts() {
       try {
         const response = await fetch("/api/products")
         const payload = await response.json()
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error ?? "No se pudieron cargar los productos")
+        }
         setProducts(payload.data ?? [])
       } catch (error) {
         console.error("No se pudieron cargar los productos", error)
+        setError(error instanceof Error ? error.message : "No se pudieron cargar los productos")
         setProducts([])
       } finally {
         setLoading(false)
@@ -72,6 +77,10 @@ export default function Catalog() {
       {loading ? (
         <div className="rounded-[2rem] border border-black/10 bg-white p-10 text-center text-sm text-black/55">
           Cargando productos...
+        </div>
+      ) : error ? (
+        <div className="rounded-[2rem] border border-[#6f1d2a]/20 bg-white p-10 text-center text-sm text-[#6f1d2a]">
+          {error}. Configura DATABASE_URL y ejecuta la migración y el seed.
         </div>
       ) : visibleProducts.length === 0 ? (
         <div className="rounded-[2rem] border border-black/10 bg-white p-10 text-center text-sm text-black/55">

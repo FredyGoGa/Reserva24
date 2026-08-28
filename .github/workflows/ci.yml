@@ -10,6 +10,20 @@ jobs:
   quality:
     name: Quality gates
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: reserva24
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d reserva24"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout
@@ -24,6 +38,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/reserva24?schema=public
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run db:seed
+
       - name: Lint
         run: npm run lint
 
@@ -31,6 +53,8 @@ jobs:
         run: npm test
 
       - name: Production build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/reserva24?schema=public
         run: npm run build
 
   docker:

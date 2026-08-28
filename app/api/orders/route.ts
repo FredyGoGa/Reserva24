@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const order = createOrder({
+    const order = await createOrder({
       customerName: body.customerName,
       document: body.document,
       phone: body.phone,
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (
       error instanceof Error &&
-      ["Producto no encontrado", "Cantidad inválida", "Precio inválido"].includes(error.message)
+      ["Producto no encontrado", "Cantidad inválida", "Precio inválido", "Stock insuficiente"].includes(error.message)
     ) {
       return NextResponse.json(
         { success: false, error: error.message },

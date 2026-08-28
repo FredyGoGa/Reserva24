@@ -1,4 +1,14 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: reserva24
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
   web:
     build:
       context: .
@@ -9,3 +19,10 @@ services:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
       NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/reserva24?schema=public
+    depends_on:
+      db:
+        condition: service_started
+
+volumes:
+  postgres_data:

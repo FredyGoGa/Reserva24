@@ -44,6 +44,26 @@ npm run dev
 
 Abre [http://localhost:3000](http://localhost:3000) en el navegador.
 
+### PostgreSQL y Prisma
+
+Configura `DATABASE_URL` a partir de `.env.example`. Con Docker Compose v2:
+
+```bash
+docker compose up -d db
+npm run db:generate
+npm run db:migrate -- --name init
+npm run db:seed
+```
+
+La aplicación usa PostgreSQL como fuente de verdad. Los pedidos recalculan
+precios en el servidor y descuentan stock dentro de una transacción. El CRUD
+de productos está disponible en `GET/POST /api/products` y
+`GET/PATCH/DELETE /api/products/:id`; `DELETE` desactiva el producto para
+conservar el histórico de pedidos. El panel administrativo está en `/admin` y
+requiere `ADMIN_TOKEN`; permite consultar pedidos, cambiar pedidos pendientes a
+pagados o cancelados y actualizar stock. Las credenciales reales deben existir
+únicamente en las variables de entorno del servidor.
+
 ## Pruebas y validación
 
 ```bash

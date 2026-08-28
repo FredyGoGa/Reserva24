@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const order = createOrder({
+    const order = await createOrder({
       customerName: body.customerName,
       document: body.document,
       phone: body.phone,
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ success: true, data: order }, { status: 201 })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "No se pudo procesar el pedido" },
       { status: 500 }

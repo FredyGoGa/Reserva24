@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest"
 import { createOrder } from "./orders.service"
 
 describe("orders service", () => {
-  it("creates an order with a calculated total", () => {
-    const order = createOrder({
+  it("creates an order with a calculated total", async () => {
+    const order = await createOrder({
       customerName: "Ana Pérez",
       document: "1000000000",
       phone: "3001234567",
@@ -12,15 +12,11 @@ describe("orders service", () => {
       items: [
         {
           id: "aguardiente-antioqueno-750",
-          name: "Aguardiente Antioqueño",
           qty: 2,
-          price: 45000,
         },
         {
           id: "ron-medellin-anejo-750",
-          name: "Ron Medellín Añejo",
           qty: 1,
-          price: 52000,
         },
       ],
     })
@@ -30,40 +26,39 @@ describe("orders service", () => {
     expect(order.items).toHaveLength(2)
   })
 
-  it("throws an error when one of the products does not exist", () => {
-    expect(() =>
+  it("throws an error when one of the products does not exist", async () => {
+    await expect(
       createOrder({
         customerName: "Ana Pérez",
         document: "1000000000",
         phone: "3001234567",
         email: "ana@example.com",
         address: "Calle 10 # 20-30",
-        items: [{ id: "producto-inexistente", name: "Producto inexistente", qty: 1, price: 10000 }],
+        items: [{ id: "producto-inexistente", qty: 1 }],
       })
-    ).toThrow("Producto no encontrado")
+    ).rejects.toThrow("Producto no encontrado")
   })
 
-  it("rejects invalid quantities and client prices", () => {
-    expect(() =>
+  it("rejects invalid quantities and ignores client prices", async () => {
+    await expect(
       createOrder({
         customerName: "Ana Pérez",
         document: "1000000000",
         phone: "3001234567",
         email: "ana@example.com",
         address: "Calle 10 # 20-30",
-        items: [{ id: "aguardiente-antioqueno-750", name: "", qty: 0, price: 45000 }],
+        items: [{ id: "aguardiente-antioqueno-750", qty: 0 }],
       })
-    ).toThrow("Cantidad inválida")
+    ).rejects.toThrow("Cantidad inválida")
 
-    expect(() =>
-      createOrder({
+    const order = await createOrder({
         customerName: "Ana Pérez",
         document: "1000000000",
         phone: "3001234567",
         email: "ana@example.com",
         address: "Calle 10 # 20-30",
-        items: [{ id: "aguardiente-antioqueno-750", name: "", qty: 1, price: 1 }],
+        items: [{ id: "aguardiente-antioqueno-750", qty: 1, price: 1 } as never],
       })
-    ).toThrow("Precio inválido")
+    expect(order.total).toBe(45000)
   })
 })
