@@ -1,4 +1,5 @@
 import dotenv from "dotenv"
+import bcrypt from "bcryptjs"
 import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { products } from "../src/lib/products.mock"
@@ -11,6 +12,24 @@ const prisma = new PrismaClient({
 })
 
 async function main() {
+  const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@reserva24.local").toLowerCase()
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "admin123"
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      name: "Administrador",
+      role: "ADMIN",
+      passwordHash: await bcrypt.hash(adminPassword, 12),
+    },
+    create: {
+      email: adminEmail,
+      name: "Administrador",
+      passwordHash: await bcrypt.hash(adminPassword, 12),
+      role: "ADMIN",
+    },
+  })
+
   for (const product of products) {
     await prisma.product.upsert({
       where: { id: product.id },

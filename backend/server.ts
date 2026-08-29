@@ -1,6 +1,9 @@
 import dotenv from "dotenv"
 import cors from "cors"
 import express, { type Request, type Response, type NextFunction } from "express"
+import bcrypt from "bcryptjs"
+import { prisma } from "@/lib/prisma"
+import { createSessionToken, getAdminSession, hashPassword, verifyPassword } from "@/lib/auth"
 import { createProduct, deleteProduct, getProductById, getProducts, updateProduct, type ProductInput } from "@/lib/products.service"
 import { createOrder, getOrders, updateOrderStatus, type CreateOrderInput } from "@/lib/orders.service"
 
@@ -11,7 +14,7 @@ const app = express()
 const port = Number(process.env.BACKEND_PORT ?? 4000)
 const frontendOrigin = process.env.FRONTEND_ORIGIN ?? "http://localhost:3000"
 
-app.use(cors({ origin: frontendOrigin }))
+app.use(cors({ origin: frontendOrigin, credentials: true }))
 app.use(express.json({ limit: "1mb" }))
 
 app.get("/.well-known/appspecific/com.chrome.devtools.json", (_request, response) => {
@@ -27,7 +30,8 @@ app.get("/", (_request, response) => {
 })
 
 function adminOnly(request: Request, response: Response, next: NextFunction) {
-  if (!process.env.ADMIN_TOKEN || request.header("x-admin-token") !== process.env.ADMIN_TOKEN) {
+  const session = getAdminSession(request)
+  if (!session) {
     response.status(401).json({ success: false, error: "No autorizado" })
     return
   }
@@ -49,6 +53,57 @@ function routeParam(value: string | string[]) {
 
 app.get("/health", (_request, response) => {
   response.json({ success: true, service: "reserva24-api" })
+})
+
+app.get("/api/auth/session", async (request, response) => {
+  const session = getAdminSession(request)
+  if (!session) {
+    response.status(401).json({ success: false, error: "No autorizado" })
+    return
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: session.sub }, select: { id: true, email: true, name: true, role: true } })
+  if (!user) {
+    response.status(401).json({ success: false, error: "No autorizado" })
+    return
+  }
+
+  response.json({ success: true, data: user })
+})
+
+app.post("/api/auth/login", async (request, response) => {
+  const { email, password } = request.body as { email?: string; password?: string }
+
+  if (!email || !password) {
+    response.status(400).json({ success: false, error: "Email y contraseña obligatorios" })
+    return
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase()
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+  if (!user || !(await verifyPassword(String(password), user.passwordHash))) {
+    response.status(401).json({ success: false, error: "Credenciales inválidas" })
+    return
+  }
+
+  const token = createSessionToken({ sub: user.id, email: user.email, role: user.role })
+  response.cookie("reserva24_session", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 7,
+    path: "/",
+  })
+
+  response.json({
+    success: true,
+    data: { id: user.id, email: user.email, name: user.name, role: user.role },
+  })
+})
+
+app.post("/api/auth/logout", (_request, response) => {
+  response.clearCookie("reserva24_session", { path: "/" })
+  response.json({ success: true })
 })
 
 app.get("/api/products", async (_request, response) => {
