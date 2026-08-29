@@ -37,6 +37,32 @@ function buildOrderId() {
   return `ord-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function serializeOrder(order: {
+  id: string
+  status: string
+  createdAt: Date
+  customerName: string
+  document: string
+  phone: string
+  email: string
+  address: string
+  notes: string | null
+  total: number
+  items: Array<{ productId: string; name: string; qty: number; unitPrice: number }>
+}): Order {
+  return {
+    ...order,
+    status: order.status.toLowerCase() as Order["status"],
+    createdAt: order.createdAt.toISOString(),
+    items: order.items.map((item) => ({
+      id: item.productId,
+      name: item.name,
+      qty: item.qty,
+      price: item.unitPrice,
+    })),
+  }
+}
+
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
   return prisma.$transaction(async (transaction) => {
     const orderItems = []
@@ -80,32 +106,23 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       if (updated.count !== 1) throw new Error("Stock insuficiente")
     }
 
-    return {
-      ...order,
-      status: order.status.toLowerCase() as Order["status"],
-      createdAt: order.createdAt.toISOString(),
-      items: order.items.map((item) => ({
-        id: item.productId,
-        name: item.name,
-        qty: item.qty,
-        price: item.unitPrice,
-      })),
-    }
+    return serializeOrder(order)
   })
 }
 
 export async function getOrders() {
-  return prisma.order.findMany({
+  const orders = await prisma.order.findMany({
     include: { items: true },
     orderBy: { createdAt: "desc" },
   })
+  return orders.map(serializeOrder)
 }
 
 export async function updateOrderStatus(id: string, status: "pending" | "paid" | "cancelled") {
   return prisma.$transaction(async (transaction) => {
     const order = await transaction.order.findUnique({ where: { id }, include: { items: true } })
     if (!order) return undefined
-    if (order.status.toLowerCase() === status) return order
+    if (order.status.toLowerCase() === status) return serializeOrder(order)
     if (order.status !== "PENDING") throw new Error("Transición de estado no permitida")
 
     if (status === "cancelled") {
@@ -117,10 +134,11 @@ export async function updateOrderStatus(id: string, status: "pending" | "paid" |
       }
     }
 
-    return transaction.order.update({
+    const updated = await transaction.order.update({
       where: { id },
       data: { status: status.toUpperCase() as "PENDING" | "PAID" | "CANCELLED" },
       include: { items: true },
     })
+    return serializeOrder(updated)
   })
 }

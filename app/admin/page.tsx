@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { formatCOP } from "@/lib/pricing"
+import { API_URL } from "@/lib/api-url"
 
 type Product = { id: string; name: string; price: number; stock: number; active: boolean }
 type Order = { id: string; customerName: string; status: string; total: number; createdAt: string }
@@ -15,8 +16,8 @@ export default function AdminPage() {
   async function load() {
     const headers = { "x-admin-token": token }
     const [productsResponse, ordersResponse] = await Promise.all([
-      fetch("/api/products"),
-      fetch("/api/admin/orders", { headers }),
+      fetch(`${API_URL}/api/products`),
+      fetch(`${API_URL}/api/admin/orders`, { headers }),
     ])
     if (!ordersResponse.ok) {
       setMessage("Token inválido o administración no configurada")
@@ -34,7 +35,7 @@ export default function AdminPage() {
   }
 
   async function updateOrder(id: string, status: string) {
-    const response = await fetch(`/api/admin/orders/${id}`, {
+    const response = await fetch(`${API_URL}/api/admin/orders/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json", "x-admin-token": token },
       body: JSON.stringify({ status }),
@@ -43,7 +44,7 @@ export default function AdminPage() {
   }
 
   async function updateStock(id: string, stock: number) {
-    const response = await fetch(`/api/products/${id}`, {
+    const response = await fetch(`${API_URL}/api/products/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json", "x-admin-token": token },
       body: JSON.stringify({ stock }),

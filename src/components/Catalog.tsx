@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import ProductCard from "./ProductCard"
 import type { Product } from "@/lib/products.mock"
+import { API_URL } from "@/lib/api-url"
 
 export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([])
@@ -13,7 +14,7 @@ export default function Catalog() {
   useEffect(() => {
     async function loadProducts() {
       try {
-        const response = await fetch("/api/products")
+        const response = await fetch(`${API_URL}/api/products`)
         const payload = await response.json()
         if (!response.ok || !payload.success) {
           throw new Error(payload.error ?? "No se pudieron cargar los productos")

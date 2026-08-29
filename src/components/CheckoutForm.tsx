@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react"
 import { useCartStore } from "@/lib/cart.store"
 import { formatCOP } from "@/lib/pricing"
 import { useHydrated } from "@/lib/use-hydrated"
+import { API_URL } from "@/lib/api-url"
 
 type FormFields = {
   name: string
@@ -41,7 +42,7 @@ export default function CheckoutForm() {
     }
 
     try {
-      const response = await fetch("/api/orders", {
+      const response = await fetch(`${API_URL}/api/orders`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

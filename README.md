@@ -44,6 +44,26 @@ npm run dev
 
 Abre [http://localhost:3000](http://localhost:3000) en el navegador.
 
+### Frontend y backend separados
+
+El frontend Next.js corre en el puerto `3000` y el backend Node.js/TypeScript
+corre en el puerto `4000`. El backend es quien se conecta a PostgreSQL mediante
+Prisma. Configura `NEXT_PUBLIC_API_URL` en `.env.local` y ejecuta dos procesos:
+
+```bash
+npm run dev:backend
+npm run dev
+```
+
+Puedes comprobar el backend en `http://localhost:4000/health`.
+
+En Docker Compose, `web` expone el frontend en `3000`, `api` expone el backend
+en `4000` y `db` expone PostgreSQL en `5432`:
+
+```bash
+docker compose up --build
+```
+
 ### PostgreSQL y Prisma
 
 Configura `DATABASE_URL` a partir de `.env.example`. Con Docker Compose v2:
