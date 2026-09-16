@@ -27,6 +27,7 @@ type Order = {
   phone: string
   address: string
   status: string
+  paymentStatus: string
   total: number
   createdAt: string
   items: Array<{ id: string; name: string; qty: number; price: number }>
@@ -215,10 +216,10 @@ export default function AdminPage() {
   }, [loadDashboard])
 
   const stats = useMemo(() => {
-    const transactions = orders.filter((order) => order.status === "paid" || order.status === "pending")
+    const transactions = orders.filter((order) => order.status === "confirmed" || order.status === "pending_payment")
     const revenue = transactions.reduce((sum, order) => sum + Number(order.total), 0)
-    const pendingOrders = orders.filter((order) => order.status === "pending").length
-    const paidOrders = orders.filter((order) => order.status === "paid").length
+    const pendingOrders = orders.filter((order) => order.status === "pending_payment").length
+    const paidOrders = orders.filter((order) => order.status === "confirmed").length
     const cancelledOrders = orders.filter((order) => order.status === "cancelled").length
     const lowStock = products.filter((product) => product.stock <= 5)
 
@@ -478,8 +479,8 @@ export default function AdminPage() {
                     {order.items.map((item) => `${item.name} x${item.qty}`).join(" · ") || "Sin items"}
                   </div>
                   <select value={order.status} onChange={(event) => void updateOrder(order.id, event.target.value)} className="rounded-lg border border-black/15 bg-white px-3 py-2 text-sm">
-                    <option value="pending">Pendiente</option>
-                    <option value="paid">Pagado</option>
+                    <option value="pending_payment">Pendiente de pago</option>
+                    <option value="confirmed">Confirmado</option>
                     <option value="cancelled">Cancelado</option>
                   </select>
                 </div>

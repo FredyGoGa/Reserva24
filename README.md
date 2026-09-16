@@ -57,6 +57,28 @@ npm run dev
 
 Puedes comprobar el backend en `http://localhost:4000/health`.
 
+Para probar Checkout Pro configura en el backend:
+
+```bash
+MERCADO_PAGO_ACCESS_TOKEN=TEST-...
+MERCADO_PAGO_WEBHOOK_SECRET=...
+BACKEND_PUBLIC_URL=https://tu-tunel-publico.example.com
+```
+
+`BACKEND_PUBLIC_URL` debe ser accesible por Mercado Pago y apuntar al backend;
+en desarrollo puedes usar un túnel HTTPS. El webhook se publica en
+`POST /api/payments/webhook` y el checkout se inicia mediante
+`POST /api/payments/preference`.
+
+Mientras Mercado Pago no habilite las credenciales, usa `PAYMENT_MODE="sandbox"`.
+El checkout abrirá `/sandbox-payment`, donde puedes simular estados aprobado,
+pendiente y rechazado sin realizar cobros ni configurar Webhooks externos.
+
+La arquitectura y el plan de evolución están documentados en
+[`docs/architecture.md`](docs/architecture.md). Las rutas de negocio viven en
+Express; Next.js solo sirve la interfaz y bloquea `/api/*` mediante
+`proxy.ts`.
+
 En Docker Compose, `web` expone el frontend en `3000`, `api` expone el backend
 en `4000` y `db` expone PostgreSQL en `5432`:
 
@@ -80,8 +102,9 @@ precios en el servidor y descuentan stock dentro de una transacción. El CRUD
 de productos está disponible en `GET/POST /api/products` y
 `GET/PATCH/DELETE /api/products/:id`; `DELETE` desactiva el producto para
 conservar el histórico de pedidos. El panel administrativo está en `/admin` y
-requiere `ADMIN_TOKEN`; permite consultar pedidos, cambiar pedidos pendientes a
-pagados o cancelados y actualizar stock. Las credenciales reales deben existir
+requiere sesión administrativa; permite consultar pedidos, cambiar pedidos
+pendientes de pago a confirmados o cancelados y actualizar stock. Las
+credenciales reales deben existir
 únicamente en las variables de entorno del servidor.
 
 ## Pruebas y validación

@@ -21,7 +21,8 @@ export type CreateOrderInput = {
 
 export type Order = {
   id: string
-  status: "pending" | "paid" | "cancelled"
+  status: "pending_payment" | "confirmed" | "cancelled"
+  paymentStatus: "pending" | "approved" | "rejected" | "cancelled"
   createdAt: string
   customerName: string
   document: string
@@ -49,10 +50,13 @@ function serializeOrder(order: {
   notes: string | null
   total: number
   items: Array<{ productId: string; name: string; qty: number; unitPrice: number }>
+  payments: Array<{ status: string; createdAt: Date }>
 }): Order {
+  const latestPayment = order.payments[0]
   return {
     ...order,
     status: order.status.toLowerCase() as Order["status"],
+    paymentStatus: latestPayment?.status.toLowerCase() as Order["paymentStatus"] ?? "pending",
     createdAt: order.createdAt.toISOString(),
     items: order.items.map((item) => ({
       id: item.productId,
@@ -98,6 +102,14 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       include: { items: true },
     })
 
+    await transaction.payment.create({
+      data: {
+        orderId: order.id,
+        provider: "MERCADO_PAGO",
+        amount: total,
+      },
+    })
+
     for (const item of orderItems) {
       const updated = await transaction.product.updateMany({
         where: { id: item.productId, stock: { gte: item.qty } },
@@ -106,24 +118,27 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       if (updated.count !== 1) throw new Error("Stock insuficiente")
     }
 
-    return serializeOrder(order)
+    return serializeOrder({ ...order, payments: [{ status: "PENDING", createdAt: new Date() }] })
   })
 }
 
 export async function getOrders() {
   const orders = await prisma.order.findMany({
-    include: { items: true },
+    include: { items: true, payments: { orderBy: { createdAt: "desc" }, take: 1 } },
     orderBy: { createdAt: "desc" },
   })
   return orders.map(serializeOrder)
 }
 
-export async function updateOrderStatus(id: string, status: "pending" | "paid" | "cancelled") {
+export async function updateOrderStatus(id: string, status: "pending_payment" | "confirmed" | "cancelled") {
   return prisma.$transaction(async (transaction) => {
-    const order = await transaction.order.findUnique({ where: { id }, include: { items: true } })
+    const order = await transaction.order.findUnique({
+      where: { id },
+      include: { items: true, payments: { orderBy: { createdAt: "desc" }, take: 1 } },
+    })
     if (!order) return undefined
     if (order.status.toLowerCase() === status) return serializeOrder(order)
-    if (order.status !== "PENDING") throw new Error("Transición de estado no permitida")
+    if (order.status !== "PENDING_PAYMENT") throw new Error("Transición de estado no permitida")
 
     if (status === "cancelled") {
       for (const item of order.items) {
@@ -136,8 +151,8 @@ export async function updateOrderStatus(id: string, status: "pending" | "paid" |
 
     const updated = await transaction.order.update({
       where: { id },
-      data: { status: status.toUpperCase() as "PENDING" | "PAID" | "CANCELLED" },
-      include: { items: true },
+      data: { status: status.toUpperCase() as "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED" },
+      include: { items: true, payments: { orderBy: { createdAt: "desc" }, take: 1 } },
     })
     return serializeOrder(updated)
   })

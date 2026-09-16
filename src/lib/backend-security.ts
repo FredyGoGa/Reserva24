@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from "express"
 const production = process.env.NODE_ENV === "production"
 
 export function assertBackendConfiguration() {
-  const required = ["DATABASE_URL", "AUTH_SECRET", "FRONTEND_ORIGIN"]
+  const required = ["DATABASE_URL", "AUTH_SECRET", "FRONTEND_ORIGIN", "MERCADO_PAGO_ACCESS_TOKEN", "MERCADO_PAGO_WEBHOOK_SECRET", "BACKEND_PUBLIC_URL"]
   const missing = required.filter((name) => !process.env[name])
   if (production && missing.length > 0) {
     throw new Error(`Faltan variables de entorno requeridas en producción: ${missing.join(", ")}`)
@@ -17,6 +17,11 @@ export function assertBackendConfiguration() {
   const origin = process.env.FRONTEND_ORIGIN
   if (production && (!origin || origin.includes("*") || !origin.startsWith("https://"))) {
     throw new Error("FRONTEND_ORIGIN debe ser un origen HTTPS específico en producción")
+  }
+
+  const backendPublicUrl = process.env.BACKEND_PUBLIC_URL
+  if (production && (!backendPublicUrl || !backendPublicUrl.startsWith("https://"))) {
+    throw new Error("BACKEND_PUBLIC_URL debe ser una URL HTTPS pública en producción")
   }
 }
 

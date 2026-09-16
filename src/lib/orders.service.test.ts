@@ -21,7 +21,7 @@ describe("orders service", () => {
       ],
     })
 
-    expect(order.status).toBe("pending")
+    expect(order.status).toBe("pending_payment")
     expect(order.total).toBe(142000)
     expect(order.items).toHaveLength(2)
   })

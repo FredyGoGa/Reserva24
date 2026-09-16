@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 
 /**
- * Next.js no sirve la API de negocio. La única API soportada es el backend
- * Express; este cierre evita que las rutas legacy de app/api queden públicas.
+ * Next.js no sirve la API de negocio. La única API soportada es Express.
+ * Este cierre evita que una ruta API accidental vuelva a exponerse desde Next.
  */
 export function proxy() {
   return new NextResponse(null, { status: 404 })

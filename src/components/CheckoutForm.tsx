@@ -27,7 +27,6 @@ export default function CheckoutForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = event.currentTarget
     setIsSubmitting(true)
     setMessage("")
     setCreatedOrderId(null)
@@ -68,12 +67,18 @@ export default function CheckoutForm() {
         throw new Error(result.error ?? "No se pudo crear el pedido")
       }
 
+      const paymentResponse = await fetch(`${API_URL}/api/payments/preference`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ orderId: result.data.id }),
+      })
+      const paymentResult = await paymentResponse.json()
+      if (!paymentResponse.ok || !paymentResult.success || !paymentResult.data.initPoint) {
+        throw new Error(paymentResult.error ?? "No se pudo iniciar el pago")
+      }
+
       clearCart()
-      setCreatedOrderId(result.data.id)
-      setMessage(
-        `Pedido creado correctamente. Tu número de referencia es ${result.data.id}.`
-      )
-      form.reset()
+      window.location.assign(paymentResult.data.initPoint)
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -176,7 +181,7 @@ export default function CheckoutForm() {
           disabled={isSubmitting}
           className="w-full rounded-full bg-[#d7a63e] px-5 py-3.5 text-sm font-bold text-[#1d211c] transition hover:bg-[#f1c35d] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isSubmitting ? "Creando pedido..." : "Pagar con Mercado Pago"}
+          {isSubmitting ? "Creando pedido..." : "Continuar al pago"}
         </button>
         {message && (
           <p className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-5 text-white/75">

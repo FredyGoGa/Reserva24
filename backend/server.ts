@@ -6,6 +6,7 @@ import { createSessionToken, getAdminSession, getSessionTtlSeconds, verifyPasswo
 import { assertBackendConfiguration, rateLimit, requireFrontendOrigin, securityHeaders } from "@/lib/backend-security"
 import { createProduct, deleteProduct, getProductById, getProducts, updateProduct, type ProductInput } from "@/lib/products.service"
 import { createOrder, getOrders, updateOrderStatus, type CreateOrderInput } from "@/lib/orders.service"
+import { completeSandboxPayment, createCheckoutPreference, paymentMode, synchronizeMercadoPagoPayment, verifyMercadoPagoSignature } from "@/lib/payments.service"
 
 dotenv.config({ path: ".env.local" })
 dotenv.config()
@@ -210,13 +211,71 @@ app.post("/api/orders", requireFrontendOrigin(frontendOrigin), rateLimit({ windo
   }
 })
 
+app.post("/api/payments/preference", requireFrontendOrigin(frontendOrigin), rateLimit({ windowMs: 60 * 1000, max: 10 }), async (request, response) => {
+  try {
+    const orderId = String(request.body?.orderId ?? "")
+    if (!orderId) {
+      response.status(400).json({ success: false, error: "Falta el identificador de la orden" })
+      return
+    }
+    const preference = await createCheckoutPreference(orderId)
+    if (!preference) {
+      response.status(404).json({ success: false, error: "Pedido no encontrado" })
+      return
+    }
+    response.status(201).json({ success: true, mode: paymentMode(), data: preference })
+  } catch (error) {
+    response.status(502).json({ success: false, error: error instanceof Error ? error.message : "No se pudo iniciar el pago" })
+  }
+})
+
+app.post("/api/payments/sandbox/complete", requireFrontendOrigin(frontendOrigin), async (request, response) => {
+  if (paymentMode() !== "sandbox") {
+    response.status(404).json({ success: false, error: "Sandbox desactivado" })
+    return
+  }
+
+  const orderId = String(request.body?.orderId ?? "")
+  const status = request.body?.status as "approved" | "rejected" | "pending" | undefined
+  if (!orderId || !status || !["approved", "rejected", "pending"].includes(status)) {
+    response.status(400).json({ success: false, error: "Orden o estado de sandbox inválido" })
+    return
+  }
+
+  try {
+    const order = await completeSandboxPayment(orderId, status)
+    if (!order) {
+      response.status(404).json({ success: false, error: "Pedido no encontrado" })
+      return
+    }
+    response.json({ success: true, data: order })
+  } catch (error) {
+    response.status(400).json({ success: false, error: error instanceof Error ? error.message : "No se pudo completar el sandbox" })
+  }
+})
+
+app.post("/api/payments/webhook", async (request, response) => {
+  const dataId = String(request.query["data.id"] ?? request.body?.data?.id ?? "")
+  if (!dataId || !verifyMercadoPagoSignature(request.get("x-signature"), request.get("x-request-id"), dataId)) {
+    response.status(401).json({ success: false, error: "Firma de webhook inválida" })
+    return
+  }
+
+  try {
+    await synchronizeMercadoPagoPayment(dataId)
+    response.status(200).json({ success: true })
+  } catch {
+    response.status(500).json({ success: false, error: "No se pudo sincronizar el pago" })
+  }
+})
+
 app.get("/api/admin/orders", adminOnly, async (_request, response) => {
   response.json({ success: true, data: await getOrders() })
 })
 
 app.patch("/api/admin/orders/:id", requireFrontendOrigin(frontendOrigin), adminOnly, async (request, response) => {
-  const status = request.body?.status as "pending" | "paid" | "cancelled" | undefined
-  if (!status || !["pending", "paid", "cancelled"].includes(status)) {
+  const status = request.body?.status as "pending_payment" | "confirmed" | "cancelled" | undefined
+  if (!status || !["pending_payment", "confirmed", "cancelled"].includes(status)) {
     response.status(400).json({ success: false, error: "Estado inválido" })
     return
   }
