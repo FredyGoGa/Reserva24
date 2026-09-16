@@ -36,7 +36,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/reserva24?schema=public
       BACKEND_PORT: 4000
       FRONTEND_ORIGIN: http://localhost:3000
-      ADMIN_TOKEN: change-this-in-production
+      AUTH_SECRET: local-development-secret-at-least-32-characters
+      SESSION_TTL_SECONDS: 604800
     depends_on:
       db:
         condition: service_started

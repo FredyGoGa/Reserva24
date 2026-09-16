@@ -1,21 +1,26 @@
 import dotenv from "dotenv"
 import cors from "cors"
 import express, { type Request, type Response, type NextFunction } from "express"
-import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
-import { createSessionToken, getAdminSession, hashPassword, verifyPassword } from "@/lib/auth"
+import { createSessionToken, getAdminSession, getSessionTtlSeconds, verifyPassword } from "@/lib/auth"
+import { assertBackendConfiguration, rateLimit, requireFrontendOrigin, securityHeaders } from "@/lib/backend-security"
 import { createProduct, deleteProduct, getProductById, getProducts, updateProduct, type ProductInput } from "@/lib/products.service"
 import { createOrder, getOrders, updateOrderStatus, type CreateOrderInput } from "@/lib/orders.service"
 
 dotenv.config({ path: ".env.local" })
 dotenv.config()
 
+assertBackendConfiguration()
+
 const app = express()
 const port = Number(process.env.BACKEND_PORT ?? 4000)
 const frontendOrigin = process.env.FRONTEND_ORIGIN ?? "http://localhost:3000"
 
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1)
+app.disable("x-powered-by")
 app.use(cors({ origin: frontendOrigin, credentials: true }))
 app.use(express.json({ limit: "1mb" }))
+app.use(securityHeaders)
 
 app.get("/.well-known/appspecific/com.chrome.devtools.json", (_request, response) => {
   response.status(204).end()
@@ -51,8 +56,13 @@ function routeParam(value: string | string[]) {
   return Array.isArray(value) ? value[0] : value
 }
 
-app.get("/health", (_request, response) => {
-  response.json({ success: true, service: "reserva24-api" })
+app.get("/health", async (_request, response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    response.json({ success: true, service: "reserva24-api", database: "connected" })
+  } catch {
+    response.status(503).json({ success: false, service: "reserva24-api", database: "unavailable" })
+  }
 })
 
 app.get("/api/auth/session", async (request, response) => {
@@ -71,38 +81,51 @@ app.get("/api/auth/session", async (request, response) => {
   response.json({ success: true, data: user })
 })
 
-app.post("/api/auth/login", async (request, response) => {
-  const { email, password } = request.body as { email?: string; password?: string }
+app.post("/api/auth/login", requireFrontendOrigin(frontendOrigin), rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  key: (request) => `${request.ip ?? "unknown"}:${String(request.body?.email ?? "").trim().toLowerCase()}`,
+}), async (request, response) => {
+  try {
+    const { email, password } = request.body as { email?: string; password?: string }
 
-  if (!email || !password) {
-    response.status(400).json({ success: false, error: "Email y contraseña obligatorios" })
-    return
+    if (!email || !password) {
+      response.status(400).json({ success: false, error: "Email y contraseña obligatorios" })
+      return
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase()
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+    if (!user || !(await verifyPassword(String(password), user.passwordHash))) {
+      response.status(401).json({ success: false, error: "Credenciales inválidas" })
+      return
+    }
+
+    const token = createSessionToken({ sub: user.id, email: user.email, role: user.role })
+    response.cookie("reserva24_session", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: getSessionTtlSeconds() * 1000,
+      path: "/",
+    })
+
+    response.json({
+      success: true,
+      data: { id: user.id, email: user.email, name: user.name, role: user.role },
+    })
+  } catch {
+    response.status(503).json({ success: false, error: "No se pudo conectar con la base de datos" })
   }
+})
 
-  const normalizedEmail = String(email).trim().toLowerCase()
-  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
-  if (!user || !(await verifyPassword(String(password), user.passwordHash))) {
-    response.status(401).json({ success: false, error: "Credenciales inválidas" })
-    return
-  }
-
-  const token = createSessionToken({ sub: user.id, email: user.email, role: user.role })
-  response.cookie("reserva24_session", token, {
+app.post("/api/auth/logout", requireFrontendOrigin(frontendOrigin), (_request, response) => {
+  response.clearCookie("reserva24_session", {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7,
     path: "/",
   })
-
-  response.json({
-    success: true,
-    data: { id: user.id, email: user.email, name: user.name, role: user.role },
-  })
-})
-
-app.post("/api/auth/logout", (_request, response) => {
-  response.clearCookie("reserva24_session", { path: "/" })
   response.json({ success: true })
 })
 
@@ -123,7 +146,7 @@ app.get("/api/products/:id", async (request, response) => {
   response.json({ success: true, data: product })
 })
 
-app.post("/api/products", adminOnly, async (request, response) => {
+app.post("/api/products", requireFrontendOrigin(frontendOrigin), adminOnly, async (request, response) => {
   try {
     const body = request.body as ProductInput
     if (!body.id || !body.name || !body.price || !body.category || !body.brand || !body.size) {
@@ -140,7 +163,7 @@ app.post("/api/products", adminOnly, async (request, response) => {
   }
 })
 
-app.patch("/api/products/:id", adminOnly, async (request, response) => {
+app.patch("/api/products/:id", requireFrontendOrigin(frontendOrigin), adminOnly, async (request, response) => {
   const body = request.body as Partial<ProductInput>
   if (body.price !== undefined && (!Number.isInteger(body.price) || body.price <= 0)) {
     response.status(400).json({ success: false, error: "Precio inválido" })
@@ -158,7 +181,7 @@ app.patch("/api/products/:id", adminOnly, async (request, response) => {
   response.json({ success: true, data: product })
 })
 
-app.delete("/api/products/:id", adminOnly, async (request, response) => {
+app.delete("/api/products/:id", requireFrontendOrigin(frontendOrigin), adminOnly, async (request, response) => {
   const deleted = await deleteProduct(routeParam(request.params.id))
   if (!deleted) {
     response.status(404).json({ success: false, error: "Producto no encontrado" })
@@ -167,7 +190,7 @@ app.delete("/api/products/:id", adminOnly, async (request, response) => {
   response.json({ success: true })
 })
 
-app.post("/api/orders", async (request, response) => {
+app.post("/api/orders", requireFrontendOrigin(frontendOrigin), rateLimit({ windowMs: 60 * 1000, max: 10 }), async (request, response) => {
   try {
     const body = request.body as CreateOrderInput
     if (!body.customerName || !body.document || !body.phone || !body.email || !body.address) {
@@ -191,7 +214,7 @@ app.get("/api/admin/orders", adminOnly, async (_request, response) => {
   response.json({ success: true, data: await getOrders() })
 })
 
-app.patch("/api/admin/orders/:id", adminOnly, async (request, response) => {
+app.patch("/api/admin/orders/:id", requireFrontendOrigin(frontendOrigin), adminOnly, async (request, response) => {
   const status = request.body?.status as "pending" | "paid" | "cancelled" | undefined
   if (!status || !["pending", "paid", "cancelled"].includes(status)) {
     response.status(400).json({ success: false, error: "Estado inválido" })
@@ -210,6 +233,11 @@ app.patch("/api/admin/orders/:id", adminOnly, async (request, response) => {
       error: error instanceof Error ? error.message : "No se pudo actualizar el pedido",
     })
   }
+})
+
+app.use((_error: unknown, _request: Request, response: Response, next: NextFunction) => {
+  void next
+  response.status(500).json({ success: false, error: "Ocurrió un error inesperado" })
 })
 
 app.listen(port, "0.0.0.0", () => {

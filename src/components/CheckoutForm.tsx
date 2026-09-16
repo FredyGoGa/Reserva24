@@ -27,6 +27,7 @@ export default function CheckoutForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
     setIsSubmitting(true)
     setMessage("")
     setCreatedOrderId(null)
@@ -72,7 +73,7 @@ export default function CheckoutForm() {
       setMessage(
         `Pedido creado correctamente. Tu número de referencia es ${result.data.id}.`
       )
-      event.currentTarget.reset()
+      form.reset()
     } catch (error) {
       setMessage(
         error instanceof Error
