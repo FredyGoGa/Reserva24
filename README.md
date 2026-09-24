@@ -79,6 +79,9 @@ La arquitectura y el plan de evolución están documentados en
 Express; Next.js solo sirve la interfaz y bloquea `/api/*` mediante
 `proxy.ts`.
 
+La guía práctica del entorno contenedorizado está en
+[`docs/docker.md`](docs/docker.md).
+
 En Docker Compose, `web` expone el frontend en `3000`, `api` expone el backend
 en `4000` y `db` expone PostgreSQL en `5432`:
 

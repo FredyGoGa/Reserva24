@@ -5,10 +5,13 @@ services:
       POSTGRES_DB: reserva24
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d reserva24"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   web:
     build:
       context: .
@@ -22,7 +25,7 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:4000
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
 
   api:
     build:
@@ -35,14 +38,11 @@ services:
       - "4000:4000"
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/reserva24?schema=public
       BACKEND_PORT: 4000
-      FRONTEND_ORIGIN: http://localhost:3000
-      AUTH_SECRET: local-development-secret-at-least-32-characters
-      SESSION_TTL_SECONDS: 604800
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/reserva24?schema=public
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   postgres_data:
