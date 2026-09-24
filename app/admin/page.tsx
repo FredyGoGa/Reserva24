@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { formatCOP } from "@/lib/pricing"
 import { API_URL } from "@/lib/api-url"
@@ -61,7 +61,7 @@ const emptyProduct: ProductDraft = {
   featured: false,
 }
 
-export default function AdminPage() {
+function AdminDashboard() {
   const searchParams = useSearchParams()
   const authRequired = searchParams.get("auth") === "required"
   const [email, setEmail] = useState("admin@reserva24.local")
@@ -490,5 +490,13 @@ export default function AdminPage() {
         </section>
       )}
     </main>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen animate-pulse bg-[#f8f5ef]" />}>
+      <AdminDashboard />
+    </Suspense>
   )
 }

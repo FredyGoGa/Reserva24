@@ -2,10 +2,10 @@
 
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { API_URL } from "@/lib/api-url"
 
-export default function SandboxPaymentPage() {
+function SandboxPaymentForm() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get("orderId")
   const [status, setStatus] = useState<"approved" | "rejected" | "pending" | null>(null)
@@ -80,5 +80,13 @@ export default function SandboxPaymentPage() {
         <Link href="/" className="mt-6 inline-block text-sm font-bold text-[#183c2c]">Volver al catálogo</Link>
       </section>
     </main>
+  )
+}
+
+export default function SandboxPaymentPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen animate-pulse bg-[#f8f5ef]" />}>
+      <SandboxPaymentForm />
+    </Suspense>
   )
 }

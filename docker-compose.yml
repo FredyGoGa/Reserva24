@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
   web:
@@ -29,10 +29,12 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     image: reserva24-api:local
+    env_file:
+      - .env.local
     ports:
       - "4000:4000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@db:5432/reserva24?schema=public
       BACKEND_PORT: 4000
       FRONTEND_ORIGIN: http://localhost:3000
