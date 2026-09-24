@@ -17,11 +17,12 @@ export default function ProductVisual({
 
   return (
     <div
-      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-[2rem] ${
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-[1.35rem] bg-[linear-gradient(145deg,white,transparent)] ${
         compact ? "h-24 w-20" : "h-72 w-full"
       }`}
       style={{ backgroundColor: `${accent}18` }}
     >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,white_0,transparent_38%)] opacity-80" />
       <div
         className={`absolute bottom-0 rounded-t-full opacity-15 ${
           compact ? "h-16 w-16" : "h-48 w-48"
@@ -29,7 +30,7 @@ export default function ProductVisual({
         style={{ backgroundColor: accent }}
       />
       <div
-        className={`relative rounded-t-[2rem] rounded-b-xl shadow-xl ${
+        className={`relative rounded-t-[2rem] rounded-b-xl shadow-[12px_22px_26px_rgba(24,35,29,.22)] transition duration-500 group-hover:-translate-y-2 group-hover:rotate-2 ${
           compact ? "h-16 w-8" : "h-44 w-20"
         }`}
         style={{ backgroundColor: accent }}

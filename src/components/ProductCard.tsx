@@ -23,7 +23,12 @@ export default function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <article className="group rounded-[2rem] border border-black/10 bg-white p-3 shadow-[0_18px_45px_rgba(42,35,25,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(42,35,25,0.12)]">
+    <article className="group relative rounded-[1.65rem] border border-black/10 bg-white p-3 shadow-[0_18px_45px_rgba(42,35,25,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(42,35,25,0.14)]">
+      {product.featured && (
+        <span className="absolute left-6 top-6 z-10 rounded-full bg-[#f3efe5]/90 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#762b36] backdrop-blur-sm">
+          Favorito
+        </span>
+      )}
       <ProductVisual name={product.name} accent={product.accent} />
       <div className="px-2 pb-3 pt-5">
         <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[#6f1d2a]">
@@ -47,7 +52,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
           <button
             onClick={handleAdd}
-            className="rounded-full bg-[#183c2c] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#6f1d2a]"
+            className="rounded-full bg-[#174737] px-4 py-2.5 text-sm font-bold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-[#762b36]"
           >
             {added ? "Agregado" : "Agregar"}
           </button>

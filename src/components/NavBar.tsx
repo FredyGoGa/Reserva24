@@ -9,13 +9,13 @@ export default function NavBar() {
   const mounted = useHydrated()
 
   return (
-    <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f5f1e8]/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f3efe5]/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 lg:px-8">
         <Link href="/" className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-full bg-[#183c2c] font-display text-lg font-bold text-[#f1c35d]">
+          <span className="grid size-10 place-items-center rounded-[1.1rem] bg-[#174737] font-display text-lg font-bold text-[#f1c35d] shadow-[0_8px_20px_rgba(23,71,55,.18)]">
             24
           </span>
-          <span className="font-display text-xl font-bold tracking-tight">
+          <span className="font-display text-xl font-bold tracking-tight text-[#18231d]">
             Bodega 24
           </span>
         </Link>
@@ -27,14 +27,14 @@ export default function NavBar() {
           <Link href="/#beneficios" className="transition hover:text-[#6f1d2a]">
             Cómo comprar
           </Link>
-          <span className="rounded-full bg-[#183c2c]/10 px-3 py-1.5 text-[#183c2c]">
-            Entregas en Facatativá
+          <span className="rounded-full border border-[#174737]/15 bg-[#174737]/5 px-3 py-1.5 text-[#174737]">
+            ● Entregas en Facatativá
           </span>
         </nav>
 
         <Link
           href="/cart"
-          className="relative flex items-center gap-2 rounded-full bg-[#1d211c] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#6f1d2a]"
+          className="relative flex items-center gap-2 rounded-full bg-[#18231d] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(24,35,29,.16)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#762b36]"
         >
           Carrito
           {mounted && count > 0 && (
